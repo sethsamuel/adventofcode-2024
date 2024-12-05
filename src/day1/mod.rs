@@ -63,6 +63,7 @@ pub fn part1() {
     println!("{}", find_id_distance(parse_file(input.as_str())));
 }
 
+#[allow(dead_code)]
 pub fn part2() {
     let input = read_file(module_path!());
     println!("{}", find_id_similarity(parse_file(input.as_str())));
