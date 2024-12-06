@@ -30,6 +30,19 @@ impl Direction {
             Direction::Se => (1, 1),
         }
     }
+
+    fn orthogonal(&self) -> Direction {
+        match self {
+            Direction::N => Direction::E,
+            Direction::S => Direction::W,
+            Direction::E => Direction::S,
+            Direction::W => Direction::N,
+            Direction::Nw => Direction::Ne,
+            Direction::Ne => Direction::Nw,
+            Direction::Sw => Direction::Se,
+            Direction::Se => Direction::Sw,
+        }
+    }
 }
 
 pub fn get_char(
@@ -89,12 +102,40 @@ pub fn count_connected(grid: &Grid, from_x: usize, from_y: usize) -> usize {
     count
 }
 
+pub fn count_crossed(grid: &Grid, from_x: usize, from_y: usize) -> usize {
+    for direction in [Direction::Nw, Direction::Ne, Direction::Sw, Direction::Se] {
+        let orthogonal = direction.orthogonal();
+        if is_char(grid, from_x, from_y, &direction, 1, 'S')
+            && is_char(grid, from_x, from_y, &direction, -1, 'M')
+            && ((is_char(grid, from_x, from_y, &orthogonal, 1, 'S')
+                && is_char(grid, from_x, from_y, &orthogonal, -1, 'M'))
+                || (is_char(grid, from_x, from_y, &orthogonal, 1, 'M')
+                    && is_char(grid, from_x, from_y, &orthogonal, -1, 'S')))
+        {
+            return 1;
+        }
+    }
+    0
+}
+
 pub fn count_xmas(grid: Grid) -> usize {
     let mut count = 0;
     for (y, line) in grid.iter().enumerate() {
         for (x, c) in line.iter().enumerate() {
             if *c == 'X' {
                 count += count_connected(&grid, x, y)
+            }
+        }
+    }
+    count
+}
+
+pub fn count_x_mas(grid: Grid) -> usize {
+    let mut count = 0;
+    for (y, line) in grid.iter().enumerate() {
+        for (x, c) in line.iter().enumerate() {
+            if *c == 'A' {
+                count += count_crossed(&grid, x, y)
             }
         }
     }
@@ -109,8 +150,8 @@ pub fn part1() {
 
 #[allow(dead_code)]
 pub fn part2() {
-    // let input = read_file(module_path!());
-    // println!("{}", sum_and_multiply(parse_file(input.as_str())));
+    let input = read_file(module_path!());
+    println!("{}", count_x_mas(parse_file(input.as_str())));
 }
 
 #[cfg(test)]
@@ -139,5 +180,9 @@ MXMXAXMASX";
     #[test]
     fn test_count_xmas() {
         assert_eq!(count_xmas(parse_file(TEST_STR)), 18)
+    }
+    #[test]
+    fn test_count_x_mas() {
+        assert_eq!(count_x_mas(parse_file(TEST_STR)), 9)
     }
 }
