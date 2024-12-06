@@ -39,6 +39,44 @@ pub fn map_rules(rules: &Rules) -> Requirements {
     map
 }
 
+pub fn sort_print(rules: &Rules, print: &Print) -> Print {
+    let mut print_pages: HashSet<Page> = HashSet::from_iter(print.iter().cloned());
+
+    let mut sorted_pages = Print::new();
+
+    while !print_pages.is_empty() {
+        let mut lead_pages: HashSet<Page> = HashSet::new();
+        let mut follow_pages: HashSet<Page> = HashSet::new();
+        for rule in rules {
+            if print_pages.contains(&rule.0) && print_pages.contains(&rule.1) {
+                lead_pages.insert(rule.0);
+                follow_pages.insert(rule.1);
+            }
+        }
+
+        for page in follow_pages.clone() {
+            _ = lead_pages.remove(&page)
+        }
+
+        if lead_pages.len() > 1 {
+            panic!("more than one top page: {:?}", lead_pages)
+        }
+        let top_page = lead_pages.into_iter().next().unwrap();
+
+        sorted_pages.push(top_page);
+
+        print_pages.remove(&top_page);
+
+        if follow_pages.len() == 1 {
+            let last_page = follow_pages.into_iter().next().unwrap();
+            print_pages.remove(&last_page);
+            sorted_pages.push(last_page);
+        }
+    }
+
+    sorted_pages
+}
+
 pub fn is_valid(print: &Print, requirements: &Requirements) -> bool {
     let mut seen: HashSet<Page> = HashSet::new();
     let mut forbidden: HashSet<Page> = HashSet::new();
@@ -79,8 +117,17 @@ pub fn part1() {
 
 #[allow(dead_code)]
 pub fn part2() {
-    let _input = read_file(module_path!());
-    // println!("{}", count_x_mas(parse_file(input.as_str())));
+    let input = read_file(module_path!());
+    let (rules, prints) = parse_file(input.as_str());
+    let requires = map_rules(&rules);
+
+    let invalid = prints.iter().filter(|p| !is_valid(p, &requires));
+    let sum: usize = invalid
+        .map(|p| sort_print(&rules, p))
+        .map(|p| get_middle(&p))
+        .sum();
+
+    println!("{}", sum);
 }
 
 #[cfg(test)]
@@ -126,6 +173,8 @@ mod tests {
         assert_eq!(prints.len(), 6);
         assert_eq!(prints[2].len(), 3);
 
+        println!("{:?}", requires);
+
         assert!(is_valid(&prints[0], &requires));
         assert!(is_valid(&prints[1], &requires));
         assert!(is_valid(&prints[2], &requires));
@@ -146,5 +195,27 @@ mod tests {
         let requires = map_rules(&rules);
         let sum = sum_pages(&prints, &requires);
         assert_eq!(sum, 143);
+    }
+
+    #[test]
+    fn test_sort_print() {
+        let (rules, prints) = parse_file(TEST_STR);
+        let requires = map_rules(&rules);
+        assert_eq!(
+            sort_print(&rules, &vec![75, 97, 47, 61, 53]),
+            vec![97, 75, 47, 61, 53]
+        );
+        assert_eq!(sort_print(&rules, &vec![61, 13, 29]), vec![61, 29, 13]);
+        assert_eq!(
+            sort_print(&rules, &vec![97, 13, 75, 29, 47]),
+            vec![97, 75, 47, 29, 13]
+        );
+
+        let invalid = prints.iter().filter(|p| !is_valid(p, &requires));
+        let sum: usize = invalid
+            .map(|p| sort_print(&rules, p))
+            .map(|p| get_middle(&p))
+            .sum();
+        assert_eq!(sum, 123);
     }
 }
