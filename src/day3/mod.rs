@@ -99,11 +99,11 @@ mod tests {
         assert_eq!(sum_and_multiply(parse_file("mul(123,456)")), 123 * 456);
         assert_eq!(
             sum_and_multiply(parse_file("mul(123,456)mul(789,1)")),
-            123 * 456 + 789 * 1
+            123 * 456 + 789
         );
         assert_eq!(
             sum_and_multiply(parse_file("mul(123,456don't()do()mul(789,1)")),
-            789 * 1
+            789
         );
         assert_eq!(sum_and_multiply(parse_file(TEST_STR)), 161);
         assert_eq!(sum_and_multiply(parse_file(TEST_STR2)), 88);
