@@ -1,18 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::Map,
-};
+use std::collections::HashSet;
 
 use crate::file::read_file;
 
 type Position = (usize, usize);
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-enum MapTile {
+pub enum MapTile {
     Obstacle,
     Open,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub enum Direction {
     N,
     S,
@@ -39,7 +36,8 @@ impl Direction {
         }
     }
 }
-struct Guard {
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
+pub struct Guard {
     position: Position,
     direction: Direction,
 }
@@ -47,9 +45,9 @@ struct Guard {
 type MapGrid = Vec<Vec<MapTile>>;
 
 pub fn parse_file(text: &str) -> (MapGrid, Guard) {
-    let lines = text.split("\n");
+    let lines = text.split('\n');
     let guard = find_guard(lines.clone().collect());
-    let grid: MapGrid = lines.map(|l| parse_line(l)).collect();
+    let grid: MapGrid = lines.map(parse_line).collect();
     (grid, guard)
 }
 
@@ -77,6 +75,12 @@ pub fn find_guard(lines: Vec<&str>) -> Guard {
         }
     }
     panic!("couldn't find guard!")
+}
+
+pub fn map_with_obstacle(grid: &MapGrid, position: Position) -> MapGrid {
+    let mut new_grid = grid.clone();
+    new_grid[position.1][position.0] = MapTile::Obstacle;
+    new_grid
 }
 
 pub fn get_tile(
@@ -130,6 +134,39 @@ pub fn count_positions(grid: &MapGrid, guard: Guard) -> usize {
     position_set.len()
 }
 
+pub fn is_loop(grid: &MapGrid, guard: Guard) -> bool {
+    let mut guard_set: HashSet<Guard> = HashSet::new();
+    let mut guard = guard;
+    loop {
+        if guard_set.contains(&guard) {
+            return true;
+        }
+        guard_set.insert(guard);
+        let new_guard = step(guard, grid);
+        match new_guard {
+            Some(new_guard) => guard = new_guard,
+            None => break,
+        }
+    }
+    false
+}
+
+pub fn find_loops(grid: &MapGrid, guard: Guard) -> usize {
+    let mut loops = 0;
+    for y in 0..grid.len() {
+        for x in 0..grid[0].len() {
+            if guard.position.0 == y && guard.position.1 == x {
+                continue;
+            }
+            let new_grid = map_with_obstacle(grid, (x, y));
+            if is_loop(&new_grid, guard) {
+                loops += 1
+            }
+        }
+    }
+    loops
+}
+
 #[allow(dead_code)]
 pub fn part1() {
     let input = read_file(module_path!());
@@ -140,16 +177,8 @@ pub fn part1() {
 #[allow(dead_code)]
 pub fn part2() {
     let input = read_file(module_path!());
-    // let (rules, prints) = parse_file(input.as_str());
-    // let requires = map_rules(&rules);
-
-    // let invalid = prints.iter().filter(|p| !is_valid(p, &requires));
-    // let sum: usize = invalid
-    //     .map(|p| sort_print(&rules, p))
-    //     .map(|p| get_middle(&p))
-    //     .sum();
-
-    // println!("{}", sum);
+    let (map, guard) = parse_file(&input);
+    println!("{}", find_loops(&map, guard))
 }
 
 #[cfg(test)]
@@ -190,5 +219,11 @@ mod tests {
     fn test_count_positions() {
         let (map, guard) = parse_file(TEST_STR);
         assert_eq!(count_positions(&map, guard), 41)
+    }
+
+    #[test]
+    fn test_find_loops() {
+        let (map, guard) = parse_file(TEST_STR);
+        assert_eq!(find_loops(&map, guard), 6)
     }
 }
