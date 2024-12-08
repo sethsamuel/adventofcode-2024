@@ -1,3 +1,5 @@
+use std::mem;
+
 use crate::file::read_file;
 
 type Line = (usize, Vec<usize>);
@@ -6,7 +8,9 @@ type Line = (usize, Vec<usize>);
 pub enum Operator {
     Add,
     Multiply,
+    Concat,
 }
+const OPERATOR_COUNT: usize = mem::variant_count::<Operator>();
 
 pub fn parse_file(text: &str) -> Vec<Line> {
     text.split('\n').map(parse_line).collect()
@@ -25,14 +29,16 @@ pub fn parse_line(text: &str) -> Line {
 
 pub fn find_operators(line: &Line) -> Option<Vec<Operator>> {
     let operators_len = line.1.len() - 1;
-    let combinations: usize = 2_usize.pow(operators_len as u32);
+    let combinations: usize = OPERATOR_COUNT.pow(operators_len as u32);
     for combination in 0..combinations {
         let mut operators = vec![Operator::Add; operators_len];
         for (i, op) in operators.iter_mut().enumerate() {
-            *op = match (combination >> i) & 1 {
+            let value = (combination / (OPERATOR_COUNT.pow(i as u32))) % OPERATOR_COUNT;
+            *op = match value {
                 0 => Operator::Add,
                 1 => Operator::Multiply,
-                _ => panic!("bitwise gave number other than 0 or 1"),
+                2 => Operator::Concat,
+                _ => panic!("got value out of range"),
             };
         }
         if check_operators(line, &operators) {
@@ -48,6 +54,9 @@ pub fn check_operators(line: &Line, operators: &[Operator]) -> bool {
         result = match op {
             Operator::Add => result + line.1[i + 1],
             Operator::Multiply => result * line.1[i + 1],
+            Operator::Concat => (result.to_string() + line.1[i + 1].to_string().as_str())
+                .parse()
+                .unwrap(),
         }
     }
     result == line.0
@@ -120,6 +129,7 @@ mod tests {
     #[test]
     fn test_sum_values() {
         let lines = parse_file(TEST_STR);
-        assert_eq!(sum_values(lines), 3749);
+        // assert_eq!(sum_values(lines), 3749);
+        assert_eq!(sum_values(lines), 11387);
     }
 }
